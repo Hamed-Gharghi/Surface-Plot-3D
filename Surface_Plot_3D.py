@@ -1,7 +1,6 @@
 """
-
 Author: Hamed Gharghi
-Date: 8/2/2024
+Date: 8/3/2024
 Description: This script provides a PyQt5-based application to visualize 3D surface plots using Plotly.
              Users can select a data file, set axis titles, and view the plot in a browser window.
              It supports data files in CSV or TXT format and allows for saving the plot as an image from the browser.
@@ -11,6 +10,8 @@ import sys
 import plotly.graph_objects as go
 import pandas as pd
 import plotly.io as pio
+from scipy.interpolate import griddata
+import numpy as np
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QFileDialog, QMessageBox
@@ -149,27 +150,26 @@ class PlotApp(QMainWindow):
         try:
             # Load data
             data = pd.read_csv(self.data_file, delimiter=',')
+            if not all(col in data.columns for col in ['X', 'Y', 'Z']):
+                QMessageBox.warning(self, "Error", "Data file must contain columns: X, Y, Z")
+                return
+
+            # Handle duplicates by averaging Z values
+            data = data.groupby(['X', 'Y'], as_index=False).agg({'Z': 'mean'})
+
+            # Define grid for interpolation
             x = data['X'].values
             y = data['Y'].values
             z = data['Z'].values
 
-            # Check if data is suitable for 3D surface plot
-            if len(x) != len(y) or len(y) != len(z):
-                QMessageBox.warning(self, "Error", "Data length mismatch. Ensure that X, Y, and Z values have the same length.")
-                return
+            # Create a grid for interpolation
+            grid_x, grid_y = np.mgrid[x.min():x.max():100j, y.min():y.max():100j]
 
-            # Reshape data
-            grid_size = int(len(x) ** 0.5)  # Assuming a square grid
-            if grid_size ** 2 != len(x):
-                QMessageBox.warning(self, "Error", "Data cannot be reshaped into a grid. Ensure the data is in a square grid format.")
-                return
-
-            x = x.reshape((grid_size, grid_size))
-            y = y.reshape((grid_size, grid_size))
-            z = z.reshape((grid_size, grid_size))
+            # Interpolate data
+            grid_z = griddata((x, y), z, (grid_x, grid_y), method='cubic')
 
             # Create the 3D surface plot
-            fig = go.Figure(data=[go.Surface(z=z, x=x, y=y, colorscale='Viridis', showscale=True)])
+            fig = go.Figure(data=[go.Surface(z=grid_z, x=grid_x, y=grid_y, colorscale='Viridis', showscale=True)])
 
             # Update layout with titles
             fig.update_layout(
