@@ -130,6 +130,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - `Interactive Plot`
 
 
-3. **Customization**: Feel free to modify the README to better fit your project or to add more detailed instructions if necessary.
 
-This README provides a comprehensive overview of your project and makes it easier for others to understand, use, and contribute to it.
